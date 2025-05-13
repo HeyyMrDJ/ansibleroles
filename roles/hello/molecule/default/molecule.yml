@@ -1,0 +1,14 @@
+---
+platforms:
+  - name: localhost
+    hosts: localhost
+    connection_options:
+      ansible_connection: local
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_SCENARIO_DIRECTORY}/../../.."
+      library: "${MOLECULE_SCENARIO_DIRECTORY}/../../library"
+verifier:
+  name: ansible

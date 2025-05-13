@@ -1,0 +1,10 @@
+---
+- name: Assert variables were set
+  ansible.builtin.assert:
+    that:
+      - hello_user_name is not none
+
+- name: Use custom hello module
+  hello:
+    user_name: "{{ hello_user_name }}"
+  failed_when: hello_user_name == "DJ"

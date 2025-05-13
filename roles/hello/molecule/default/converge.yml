@@ -1,0 +1,27 @@
+---
+- name: Converge
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  roles:
+    - role: hello
+      vars:
+        hello_user_name: "Tim"
+  tasks:
+    - name: Expect DJ to fail
+      block:
+        - name: Apply role for DJ (expected to fail)
+          ansible.builtin.include_role:
+            name: hello
+          vars:
+            hello_user_name: "DJ"
+
+        - name: Fail if role did not fail
+          ansible.builtin.fail:
+            msg: "Role did not fail as expected for DJ"
+
+      rescue:
+        - name: Log that failure was expected
+          ansible.builtin.debug:
+            msg: "Role failed for DJ as expected"

@@ -1,0 +1,7 @@
+---
+- name: Test Role
+  hosts: localhost
+  roles:
+    - role: hello
+      vars:
+        hello_user_name: "DJ"
