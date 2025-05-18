@@ -1,0 +1,48 @@
+- name: Test custom lookup plugin
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Get Access Token
+      set_fact:
+        access_token: " {{ lookup('get_access_key') }}"
+
+    - name: Print Access Token
+      debug:
+        msg: "Access Token: {{ access_token }}"
+
+
+    - name: Get app registrations
+      set_fact:
+        myapi_data_raw: "{{ lookup('callapi', access_token) }}"
+
+    - name: Convert from UnsafeText to real object
+      set_fact:
+        myapi_data: "{{ myapi_data_raw | from_yaml }}"
+
+    - debug:
+        var: myapi_data
+
+    - debug:
+        msg: "{{ myapi_data.__class__.__name__ }}"
+
+    - name: Use Custom Filter plugin
+      set_fact:
+        expiringwithtagsraw: "{{ myapi_data | expired }}"
+
+    - name: Print expiring with tags
+      debug:
+        var: expiringwithtagsraw
+
+    - name: Use Custom Filter plugin
+      set_fact:
+        expiringwithtags: "{{ expiringwithtagsraw | from_yaml }}"
+
+    - debug:
+        msg: "{{ expiringwithtags.__class__.__name__ }}"
+
+    - name: Use custom delete module
+      delete_expired_secrets:
+        name: "{{ item }}"
+        token: "{{ access_token }}"
+      register: delete_result
+      loop: "{{ expiringwithtags }}"
