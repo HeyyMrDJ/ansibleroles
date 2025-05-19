@@ -14,7 +14,6 @@ class LookupModule(LookupBase):
             "Authorization": f"Bearer {token}"
         }
 
-        # 3. Call the hardcoded API
         api_url = "https://graph.microsoft.com/v1.0/applications"
 
         try:
@@ -29,10 +28,13 @@ class LookupModule(LookupBase):
             apps = api_response.json().get("value", [])
             myapps = []
             for app in apps:
-                appy = AppRegistration(**app)
-                myapps.append(appy)
+                # Unpack the app dictionary into the pydantic AppRegistration model
+                app_reg = AppRegistration(**app)
+                myapps.append(app_reg)
 
+            # Convert pydantic models to json
             return [app.model_dump(mode="json") for app in myapps]
 
         except Exception as e:
             raise AnsibleError(f"Failed to call API: {e}")
+            return []

@@ -17,7 +17,8 @@ class LookupModule(LookupBase):
         # 2. Get access token using requests
         try:
             response = requests.post(
-                token_url,
+                # Typecase to str to avoid issues with NoneType
+                str(token_url),
                 data={
                     "client_id": client_id,
                     "client_secret": client_secret,

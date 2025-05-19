@@ -6,43 +6,105 @@
       set_fact:
         access_token: " {{ lookup('get_access_key') }}"
 
-    - name: Print Access Token
+    - name: Get app registrations using custom lookup plugin 'callapi' and pass in the access token
+      set_fact:
+        appreg_data_raw: "{{ lookup('getappregs', access_token) }}"
+        #
+    # Prints the type of the object. Should be list, not AnsibleUnsafeText
+    - debug:
+        msg: "{{ appreg_data_raw.__class__.__name__ }}"
+
+    - name: Print the app registrations with no passwords
+      set_fact:
+        appreg_data_no_passwords: "{{ appreg_data_raw | apps_with_no_passwords }}"
+
+    - name: Print the app registrations with no passwords
       debug:
-        msg: "Access Token: {{ access_token }}"
+        var: appreg_data_no_passwords
 
-
-    - name: Get app registrations
+    - name: Print the app registrations with long duration passwords
       set_fact:
-        myapi_data_raw: "{{ lookup('callapi', access_token) }}"
+        appreg_data_long_passwords: "{{ appreg_data_raw | apps_with_long_password_duration }}"
 
-    - name: Convert from UnsafeText to real object
-      set_fact:
-        myapi_data: "{{ myapi_data_raw | from_yaml }}"
-
-    - debug:
-        var: myapi_data
-
-    - debug:
-        msg: "{{ myapi_data.__class__.__name__ }}"
-
-    - name: Use Custom Filter plugin
-      set_fact:
-        expiringwithtagsraw: "{{ myapi_data | expired }}"
-
-    - name: Print expiring with tags
+    - name: Print the app registrations with long duration passwords
       debug:
-        var: expiringwithtagsraw
+        var: appreg_data_long_passwords
 
-    - name: Use Custom Filter plugin
+    - name: Verify each appreg has credentials
       set_fact:
-        expiringwithtags: "{{ expiringwithtagsraw | from_yaml }}"
+        appreg_passwords: "{{ appreg_data_raw | apps_with_passwords }}"
 
-    - debug:
-        msg: "{{ expiringwithtags.__class__.__name__ }}"
+    - name: Print the app registrations with credentials
+      debug:
+        var: appreg_passwords
+    
+    - name: Verify each appreg only has 1 or 2 credentials
+      set_fact:
+        appreg_bad_password_count: "{{ appreg_data_raw | apps_with_incorrect_password_num }}"
 
-    - name: Use custom delete module
-      delete_expired_secrets:
+    - name: Print the app registrations that have 0 or > 2 credentials
+      debug:
+        var: appreg_bad_password_count
+
+    - name: Add custom filter plugin 'filter_by_tag'
+      set_fact:
+        appreg_data_tags: "{{ appreg_data_raw | filter_by_tag('UPDATE') }}"
+
+    - name: Print the app registrations that have the tag 'UPDATE'
+      debug:
+        var: appreg_data_tags
+
+    - name: Use Custom Filter plugin 'expired'
+      set_fact:
+        expired_appreg_credentials: "{{ appreg_data_raw | expired }}"
+
+    - name: Print the app registrations that are expired
+      debug:
+        var: expired_appreg_credentials
+
+    - name: Use Custom Filter plugin 'expiring'
+      set_fact:
+        expiring_appreg_credentials: "{{ appreg_data_raw | expiring }}"
+
+    - name: Print the app registrations that are expiring
+      debug:
+        var: expiring_appreg_credentials
+
+    - name: Use custom delete module to deleted expiring app registrations
+      delete_secret:
         name: "{{ item }}"
         token: "{{ access_token }}"
-      register: delete_result
-      loop: "{{ expiringwithtags }}"
+      register: delete_expiring_result
+      loop: "{{ expiring_appreg_credentials }}"
+
+    - name: Print the result of the secret deletion
+      debug:
+        var: delete_expiring_result
+
+    - name: Use custom delete module to deleted expired app registrations
+      delete_secret:
+        name: "{{ item }}"
+        token: "{{ access_token }}"
+      register: delete_expired_result
+      loop: "{{ expired_appreg_credentials }}"
+
+    - name: Print the result of the secret deletion
+      debug:
+        var: delete_expired_result
+
+    - name: Print the app registrations that are expiring
+      debug:
+        var: "{{ item }}"
+      loop: "{{ appreg_data_raw | filter_by_tag('UPDATE') | expiring }}"
+
+
+    - name: Create a new app registration secret using custom module
+      create_secret:
+        name: "{{ item }}"
+        token: "{{ access_token }}"
+      register: create_result
+      loop: "{{ appreg_data_raw | filter_by_tag('UPDATE') | expiring }}"
+
+    - name: Print the result of the secret creation
+      debug:
+        var: create_result
